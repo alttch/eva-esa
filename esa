@@ -35,28 +35,32 @@ echo "Looking for command file [/eva-esa.json]"
 
 for d in /dev/disk/by-uuid/*; do
     echo -n "`echo ${d} | awk -F/ '{ print $NF }'` [`readlink ${d}|awk -F/ '{ print $NF }'`] - "
-    mount -o ro $d /tmp/esa/mnt
+    mount -o ro $d /tmp/esa/mnt > /dev/null 2>&1
     if [ -f /tmp/esa/mnt/eva-esa.json ]; then
         echo "processing..."
-        cmd=`cat /eva-esa.json |jq -r .cmd`
-        args=`cat /eva-esa.json |jq -r .args`
-        echo "command: ${cmd} ${args}"
-        echo ${cmd} ${args} | grep -E "[;|]" > /dev/null
-        if [ $? -eq 0 ]; then
-            echo "Unsafe symbols found in command. Skipping"
-            continue
-        fi
-        if [ -f xc/${cmd} ]; then
-            echo
-            xc/${cmd} ${args}
-            echo
-        else
-            echo "Command script file not found. Skipping"
-        fi
+        i=0
+        cmd=`cat /tmp/esa/mnt/eva-esa.json |jq -r .exec[0]`
+        until [ "x${cmd}" == "xnull" ]; do
+            echo "command: ${cmd}"
+            echo ${cmd} | grep -E "[;|]" > /dev/null
+            if [ $? -eq 0 ]; then
+                echo "Unsafe symbols found in command. Skipping"
+                continue
+            fi
+            if [ -f `echo xc/${cmd}|awk '{ print $1 }'` ]; then
+                echo
+                xc/${cmd}
+                echo
+            else
+                echo "Command script file not found. Skipping"
+            fi
+            i=`expr $i + 1`
+            cmd=`cat /tmp/esa/mnt/eva-esa.json |jq -r .exec[$i]`
+        done
     else
         echo "none"
     fi
-    umount /tmp/esa/mnt
+    umount /tmp/esa/mnt > /dev/null 2>&1
 done
 
 if [ -f /eva-esa.json ]; then
