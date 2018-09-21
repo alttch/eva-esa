@@ -1,0 +1,70 @@
+#!/bin/bash
+
+cat << EOF
+     _______    _____       _______________
+    / ____/ |  / /   |     /  _/ ____/ ___/
+   / __/  | | / / /| |     / // /    \\__ \\
+  / /___  | |/ / ___ |   _/ // /___ ___/ /
+ /_____/  |___/_/  |_|  /___/\____//____/
+
+  www.eva-ics.com (c) 2012-2018 Altertech
+EOF
+
+D=`realpath $0`
+cd `dirname ${D}`
+
+source etc/esa
+
+echo
+
+if [ "x${EVA_DIR}" != "x" ] ; then
+    echo "EVA ICS directory: ${EVA_DIR}"
+else
+    echo "No EVA ICS directory defined. Setting to /opt/eva"
+    EVA_DIR=/opt/eva
+fi
+
+export EVA_DIR
+
+mkdir -p /tmp/esa
+mkdir -p /tmp/esa/mnt
+
+umount -f /tmp/esa/mnt > /dev/null 2>&1
+
+echo "Looking for command file [/eva-esa.json]"
+
+for d in /dev/disk/by-uuid/*; do
+    echo -n "`echo ${d} | awk -F/ '{ print $NF }'` [`readlink ${d}|awk -F/ '{ print $NF }'`] - "
+    mount $d /tmp/esa/mnt
+    if [ -f /tmp/esa/mnt/eva-esa.json ]; then
+        echo "processing..."
+        cmd=`cat /eva-esa.json |jq -r .cmd`
+        args=`cat /eva-esa.json |jq -r .args`
+        echo "command: ${cmd} ${args}"
+        echo ${cmd} ${args} | grep -E "[;|]" > /dev/null
+        if [ $? -eq 0 ]; then
+            echo "Unsafe symbols found in command. Skipping"
+            continue
+        fi
+        if [ -f xc/${cmd} ]; then
+            echo
+            xc/${cmd} ${args}
+            echo
+        else
+            echo "Command script file not found. Skipping"
+        fi
+    else
+        echo "none"
+    fi
+    umount /tmp/esa/mnt
+done
+
+echo
+
+if [ ! -x ${EVA_DIR}/sbin/eva-control ]; then
+    echo "EVA ICS is not installed. Exiting"
+    exit 5
+else
+    echo "EVA ICS v`${EVA_DIR}/sbin/eva-tinyapi -V` `${EVA_DIR}/sbin/eva-tinyapi -B`"
+    ${EVA_DIR}/sbin/eva-control start
+fi
