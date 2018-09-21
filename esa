@@ -79,3 +79,5 @@ else
     echo
     ${EVA_DIR}/sbin/eva-control start
 fi
+
+exit 0
