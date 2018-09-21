@@ -1,0 +1,5 @@
+#!/bin/bash
+
+echo "TEST COMMAND"
+echo "args: $*"
+exit 0
