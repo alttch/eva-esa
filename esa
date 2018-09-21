@@ -35,7 +35,7 @@ echo "Looking for command file [/eva-esa.json]"
 
 for d in /dev/disk/by-uuid/*; do
     echo -n "`echo ${d} | awk -F/ '{ print $NF }'` [`readlink ${d}|awk -F/ '{ print $NF }'`] - "
-    mount $d /tmp/esa/mnt
+    mount -o ro $d /tmp/esa/mnt
     if [ -f /tmp/esa/mnt/eva-esa.json ]; then
         echo "processing..."
         cmd=`cat /eva-esa.json |jq -r .cmd`
@@ -59,6 +59,12 @@ for d in /dev/disk/by-uuid/*; do
     umount /tmp/esa/mnt
 done
 
+if [ -f /eva-esa.json ]; then
+    mount -o remount,rw /
+    rm -f /eva-esa.json
+    mount -o remount,ro /
+fi
+
 echo
 
 if [ ! -x ${EVA_DIR}/sbin/eva-control ]; then
@@ -66,5 +72,6 @@ if [ ! -x ${EVA_DIR}/sbin/eva-control ]; then
     exit 5
 else
     echo "EVA ICS v`${EVA_DIR}/sbin/eva-tinyapi -V` `${EVA_DIR}/sbin/eva-tinyapi -B`"
+    echo
     ${EVA_DIR}/sbin/eva-control start
 fi
