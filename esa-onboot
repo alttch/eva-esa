@@ -1,13 +1,13 @@
 #!/bin/bash
 
+D=`realpath $0`
+cd `dirname ${D}`
+
 BUILD=`cat ver`
 cat banner
 
 echo "  ESA build ${BUILD}"
 echo
-
-D=`realpath $0`
-cd `dirname ${D}`
 
 source etc/esa
 
