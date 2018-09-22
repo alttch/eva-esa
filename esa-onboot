@@ -28,7 +28,7 @@ umount -f /tmp/eva-esa/mnt > /dev/null 2>&1
 echo "Looking for command file [/eva-esa.json]"
 
 for d in /dev/disk/by-uuid/*; do
-    mount -o ro $d /tmp/eva-esa/mnt > /dev/null 2>&1
+    mount $d /tmp/eva-esa/mnt > /dev/null 2>&1
     if [ $? -eq 0 ]; then
         echo -n "`echo ${d} | awk -F/ '{ print $NF }'` [`readlink ${d}|awk -F/ '{ print $NF }'`] - "
         if [ -f /tmp/eva-esa/mnt/eva-esa.json ]; then
@@ -52,6 +52,7 @@ for d in /dev/disk/by-uuid/*; do
                 i=`expr $i + 1`
                 cmd=`cat /tmp/eva-esa/mnt/eva-esa.json |jq -r .exec[$i]`
             done
+            rm -f /tmp/eva-esa/mnt/eva-esa.json
         else
             echo "none"
         fi
