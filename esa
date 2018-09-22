@@ -1,5 +1,7 @@
 #!/bin/bash
 
+BUILD=`cat ver`
+
 cat << EOF
      _______    _____       _______________
     / ____/ |  / /   |     /  _/ ____/ ___/
@@ -8,14 +10,15 @@ cat << EOF
  /_____/  |___/_/  |_|  /___/\____//____/
 
   www.eva-ics.com (c) 2012-2018 Altertech
+
+  ESA build ${BUILD}
+
 EOF
 
 D=`realpath $0`
 cd `dirname ${D}`
 
 source etc/esa
-
-echo
 
 if [ "x${EVA_DIR}" != "x" ] ; then
     echo "EVA ICS directory: ${EVA_DIR}"
@@ -26,48 +29,44 @@ fi
 
 export EVA_DIR
 
-mkdir -p /tmp/esa
-mkdir -p /tmp/esa/mnt
+mkdir -p /tmp/eva-esa
+mkdir -p /tmp/eva-esa/mnt
 
-umount -f /tmp/esa/mnt > /dev/null 2>&1
+umount -f /tmp/eva-esa/mnt > /dev/null 2>&1
 
 echo "Looking for command file [/eva-esa.json]"
 
 for d in /dev/disk/by-uuid/*; do
-    echo -n "`echo ${d} | awk -F/ '{ print $NF }'` [`readlink ${d}|awk -F/ '{ print $NF }'`] - "
-    mount -o ro $d /tmp/esa/mnt > /dev/null 2>&1
-    if [ -f /tmp/esa/mnt/eva-esa.json ]; then
-        echo "processing..."
-        i=0
-        cmd=`cat /tmp/esa/mnt/eva-esa.json |jq -r .exec[0]`
-        until [ "x${cmd}" == "xnull" ]; do
-            echo "command: ${cmd}"
-            echo ${cmd} | grep -E "[;|]" > /dev/null
-            if [ $? -eq 0 ]; then
-                echo "Unsafe symbols found in command. Skipping"
-                continue
-            fi
-            if [ -f `echo xc/${cmd}|awk '{ print $1 }'` ]; then
-                echo
-                xc/${cmd}
-                echo
-            else
-                echo "Command script file not found. Skipping"
-            fi
-            i=`expr $i + 1`
-            cmd=`cat /tmp/esa/mnt/eva-esa.json |jq -r .exec[$i]`
-        done
-    else
-        echo "none"
+    mount -o ro $d /tmp/eva-esa/mnt > /dev/null 2>&1
+    if [ $? -eq 0 ]; then
+        echo -n "`echo ${d} | awk -F/ '{ print $NF }'` [`readlink ${d}|awk -F/ '{ print $NF }'`] - "
+        if [ -f /tmp/eva-esa/mnt/eva-esa.json ]; then
+            echo "processing..."
+            i=0
+            cmd=`cat /tmp/eva-esa/mnt/eva-esa.json |jq -r .exec[0]`
+            until [ "x${cmd}" == "xnull" ]; do
+                echo "command: ${cmd}"
+                echo ${cmd} | grep -E "[;|]" > /dev/null
+                if [ $? -eq 0 ]; then
+                    echo "Unsafe symbols found in command. Skipping"
+                    continue
+                fi
+                if [ -f `echo xc/${cmd}|awk '{ print $1 }'` ]; then
+                    echo
+                    xc/${cmd}
+                    echo
+                else
+                    echo "Command script file not found. Skipping"
+                fi
+                i=`expr $i + 1`
+                cmd=`cat /tmp/eva-esa/mnt/eva-esa.json |jq -r .exec[$i]`
+            done
+        else
+            echo "none"
+        fi
+        umount /tmp/eva-esa/mnt
     fi
-    umount /tmp/esa/mnt > /dev/null 2>&1
 done
-
-if [ -f /eva-esa.json ]; then
-    mount -o remount,rw /
-    rm -f /eva-esa.json
-    mount -o remount,ro /
-fi
 
 echo
 
