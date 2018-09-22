@@ -20,43 +20,45 @@ fi
 
 export EVA_DIR
 
-mkdir -p /tmp/eva-esa
-mkdir -p /tmp/eva-esa/mnt
+MNT_DIR=/tmp/eva-esa/mnt
 
-umount -f /tmp/eva-esa/mnt > /dev/null 2>&1
+mkdir -p ${MNT_DIR}
+
+umount -f ${MNT_DIR} > /dev/null 2>&1
 
 echo "Looking for command file [/eva-esa.json]"
 
 for d in /dev/disk/by-uuid/*; do
-    mount $d /tmp/eva-esa/mnt > /dev/null 2>&1
+    mount $d ${MNT_DIR} > /dev/null 2>&1
     if [ $? -eq 0 ]; then
         echo -n "`echo ${d} | awk -F/ '{ print $NF }'` [`readlink ${d}|awk -F/ '{ print $NF }'`] - "
-        if [ -f /tmp/eva-esa/mnt/eva-esa.json ]; then
+        if [ -f ${MNT_DIR}/eva-esa.json ]; then
             echo "processing..."
+            rm -f ${MNT_DIR}/eva-esa.log
             i=0
-            cmd=`cat /tmp/eva-esa/mnt/eva-esa.json |jq -r .exec[0]`
+            cmd=`cat ${MNT_DIR}/eva-esa.json |jq -r .exec[0]`
             until [ "x${cmd}" == "xnull" ]; do
-                echo "command: ${cmd}"
+                echo "command: ${cmd}" | tee -a ${MNT_DIR}/eva-esa.log
                 echo ${cmd} | grep -E "[;|]" > /dev/null
                 if [ $? -eq 0 ]; then
-                    echo "Unsafe symbols found in command. Skipping"
+                    echo "Unsafe symbols found in command. Skipping" | tee -a ${MNT_DIR}/eva-esa.log
                     continue
                 fi
                 if [ -f `echo xc/${cmd}|awk '{ print $1 }'` ]; then
-                    echo
-                    xc/${cmd}
-                    echo
+                    echo | tee -a ${MNT_DIR}/eva-esa.log
+                    xc/${cmd} 2>&1 | tee -a ${MNT_DIR}/eva-esa.log
+                    echo | tee -a ${MNT_DIR}/eva-esa.log
                 else
-                    echo "Command script file not found. Skipping"
+                    echo "Command script file not found. Skipping" | tee -a ${MNT_DIR}/eva-esa.log
                 fi
                 i=`expr $i + 1`
-                cmd=`cat /tmp/eva-esa/mnt/eva-esa.json |jq -r .exec[$i]`
+                cmd=`cat ${MNT_DIR}/eva-esa.json |jq -r .exec[$i]`
             done
-            rm -f /tmp/eva-esa/mnt/eva-esa.json
+            rm -f ${MNT_DIR}/eva-esa.json
         else
             echo "none"
         fi
-        umount /tmp/eva-esa/mnt
+        umount ${MNT_DIR}
     fi
 done
 
