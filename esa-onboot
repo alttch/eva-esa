@@ -18,9 +18,10 @@ else
     EVA_DIR=/opt/eva
 fi
 
-export EVA_DIR
-
 MNT_DIR=/tmp/eva-esa/mnt
+
+export EVA_DIR
+export MNT_DIR
 
 mkdir -p ${MNT_DIR}
 
